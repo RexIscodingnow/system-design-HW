@@ -4,6 +4,7 @@ import time
 import pygame 
 from pygame.locals import *
 from drew import *
+from params.color import *
 
 # 偵數
 FPS = 30
@@ -19,30 +20,8 @@ BRICK_DOWN_SPEED_MAX = 0.8
 canvas_width = 800
 canvas_height = 600
 
-# 顏色.
-color_block         = (0,0,0)
-color_white         = (255, 255, 255)
-color_red           = (255, 0, 0)
-color_gray          = (107,130,114)
-color_gray_block    = (20,31,23)
-color_gray_green    = (0, 255, 0)
-color_light_gray    = (200, 200, 200)
-
-# ColorVer:
-# 橘色   - N1.
-box_color_orange    = (204,102,51)
-# 紫色   - N2.
-box_color_purple    = (153,102,153)
-# 藍色   - L1.
-box_color_blue      = (51,102,204)
-# 紅色   - L2.
-box_color_light_red = (204,51,51)
-# 淡藍色 - T.
-box_color_light_blue= (51,204,255)
-# 黃色   - O.
-box_color_yellow    = (204,204,51)
-# 綠色   - I.
-box_color_green     = (51,153,102)
+# ==============================================================
+# ==============================================================
 
 # 定義磚塊.
 brick_dict = {
@@ -54,32 +33,19 @@ brick_dict = {
     "60": ( 8, 9,12,13),    # O.
     "70": (12,13,14,15), "71": ( 1, 5, 9,13)    #I.
 }
-
 # 方塊陣列(10x20).
 bricks_array = []
-for i in range(10):
-    bricks_array.append([0] * 20)
-
 # 方塊陣列(4x4).
 bricks = []
-for i in range(4):
-    bricks.append([0] * 4)
-
 # 下一個方塊陣列(4x4).
 bricks_next = []
-for i in range(4):
-    bricks_next.append([0] * 4)
-
 # 下一個方塊圖形陣列(4x4).
 bricks_next_object: list[list[Box]] = []
-for i in range(4):
-    bricks_next_object.append([0] * 4)
-
 # 磚塊數量串列.
 bricks_list: list[list[Box]] = []
-for i in range(10):
-    bricks_list.append([0] * 20)
 
+# ==============================================================
+# ==============================================================
 
 # 方塊在容器的位置.
 # (-2 ~ 6) (為 6 的時候不能旋轉方塊).
@@ -113,6 +79,30 @@ lines_number = 0
 # 1:清除磚塊.
 game_mode = 0
 
+# ==============================================================
+# ==============================================================
+
+
+def bricksDefinition():
+    """
+    定義磚塊
+    """
+    for i in range(10):
+        bricks_array.append([0] * 20)
+
+    for i in range(4):
+        bricks.append([0] * 4)
+
+    for i in range(4):
+        bricks_next.append([0] * 4)
+
+    for i in range(4):
+        bricks_next_object.append([0] * 4)
+
+    for i in range(10):
+        bricks_list.append([0] * 20)
+
+
 #-------------------------------------------------------------------------
 # 函數:秀字.
 # 傳入:
@@ -125,12 +115,12 @@ def showFont(text, x, y, color):
     text = font.render(text, True, color) 
     canvas.blit( text, (x,y))
 
-#-------------------------------------------------------------------------
-# 函數:取得磚塊索引陣列.
-# 傳入:
-#   brickId : 方塊編號(1~7).
-#   state   : 方塊狀態(0~3).
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+#   函數:取得磚塊索引陣列.
+#   傳入:
+#     brickId : 方塊編號(1~7).
+#     state   : 方塊狀態(0~3).
+# -------------------------------------------------------------------------
 def getBrickIndex(brickId, state):
     global brick_dict
 
@@ -139,12 +129,12 @@ def getBrickIndex(brickId, state):
     # 回傳方塊陣列.
     return brick_dict[brickKey]
 
-#-------------------------------------------------------------------------
-# 轉換定義方塊到方塊陣列.
-# 傳入:
-#   brickId : 方塊編號(1~7).
-#   state   : 方塊狀態(0~3).
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+#   轉換定義方塊到方塊陣列.
+#   傳入:
+#     brickId : 方塊編號(1~7).
+#     state   : 方塊狀態(0~3).
+# -------------------------------------------------------------------------
 def transformToBricks(brickId, state):
     global bricks
 
@@ -171,12 +161,12 @@ def transformToBricks(brickId, state):
         print(s)
     """
 
-#-------------------------------------------------------------------------
-# 判斷是否可以複製到容器內.
-# 傳出:
-#   true    : 可以.
-#   false   : 不可以.
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+#   判斷是否可以複製到容器內.
+#   傳出:
+#     true    : 可以.
+#     false   : 不可以.
+# -------------------------------------------------------------------------
 def ifCopyToBricksArray():
     global bricks, bricks_array
     global container_x, container_y
@@ -196,9 +186,9 @@ def ifCopyToBricksArray():
                         return False
     return True
 
-#-------------------------------------------------------------------------
-# 複製方塊到容器內.
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+#   複製方塊到容器內.
+# -------------------------------------------------------------------------
 def copyToBricksArray():
     global bricks, bricks_array
     global container_x, container_y
@@ -213,9 +203,9 @@ def copyToBricksArray():
                 if (posX >= 0 and posY >= 0):
                     bricks_array[posX][posY] = bricks[x][y]
      
-#-------------------------------------------------------------------------
-# 初始遊戲.
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+#   初始遊戲.
+# -------------------------------------------------------------------------
 def resetGame():
     global BRICK_DOWN_SPEED_MAX, brick_down_speed
     global bricks_array, bricks, lines_number, lines_number_max
@@ -240,11 +230,11 @@ def resetGame():
     # 連線數.
     lines_number = 0
 
-#---------------------------------------------------------------------------
-# 判斷與設定要清除的方塊.
-# 傳出:
-#   連線數
-#---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+#   判斷與設定要清除的方塊.
+#   傳出:
+#     連線數
+# ---------------------------------------------------------------------------
 def ifClearBrick():
     pointNum = 0
     lineNum = 0
@@ -262,9 +252,9 @@ def ifClearBrick():
     
     return lineNum
 
-#-------------------------------------------------------------------------
-# 更新下一個磚塊.
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+#   更新下一個磚塊.
+# -------------------------------------------------------------------------
 def updateNextBricks(brickId):
     global bricks_next
     
@@ -329,9 +319,9 @@ def updateNextBricks(brickId):
             pos_x = pos_x + 28        
         pos_y = pos_y + 28
                 
-#-------------------------------------------------------------------------
-# 產生新磚塊.
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+#   產生新磚塊.
+# -------------------------------------------------------------------------
 def brickNew():
     global game_over, container_x, container_y, brick_id, brick_next_id, brick_state
     global lines_number, game_mode
@@ -375,9 +365,9 @@ def brickNew():
         # 重新開始遊戲.
         resetGame()
     
-#-------------------------------------------------------------------------
-# 清除的方塊.
-#-------------------------------------------------------------------------
+# -------------------------------------------------------------------------
+#   清除的方塊.
+# -------------------------------------------------------------------------
 def clearBrick():
     global bricks_array
     # 一列一列判斷清除方塊.
@@ -461,6 +451,7 @@ clock = pygame.time.Clock()
 # 設定字型-黑體.
 font = pygame.font.SysFont("simsunnsimsun", 24)
 
+bricksDefinition()
 
 # 將繪圖方塊放入陣列.
 for y in range(20):
@@ -578,51 +569,15 @@ def gaming():
                     # 磚塊快速下降.
                     brick_down_speed = BRICK_DROP_RAPIDLY
                 
-                # """
                 #-----------------------------------------------------------------
                 # 移動方塊-左: left-arraw
                 elif (event.key in [pygame.K_LEFT, pygame.K_a]) and game_mode == 0:
                     moveLeftBrick()
-                    # time_leftKey = time.time()
-                    
-                    # container_x = container_x - 1
-                    # if (container_x < 0):
-                    #     if (container_x == -1):
-                    #         if (bricks[0][0] != 0 or bricks[0][1] != 0 or bricks[0][2] != 0 or bricks[0][3] != 0):
-                    #             container_x = container_x + 1
-                        
-                    #     elif (container_x == -2): 
-                    #         if (bricks[1][0] != 0 or bricks[1][1] != 0 or bricks[1][2] != 0 or bricks[1][3] != 0):
-                    #             container_x = container_x + 1
-                        
-                    #     else:
-                    #         container_x = container_x + 1
-
-                    # # 碰到磚塊.
-                    # if (not ifCopyToBricksArray()):
-                    #     container_x = container_x + 1
 
                 #-----------------------------------------------------------------
                 # 移動方塊-右: right-arraw
                 elif (event.key in [pygame.K_RIGHT, pygame.K_d]) and game_mode == 0:
                     moveRightBrick()
-                    # container_x = container_x + 1
-                    # if (container_x > 6):
-                    #     if (container_x == 7):
-                    #         if (bricks[3][0] != 0 or bricks[3][1] != 0 or bricks[3][2] != 0 or bricks[3][3] != 0):
-                    #             container_x = container_x - 1;                        
-                        
-                    #     elif (container_x == 8):
-                    #         if (bricks[2][0] != 0 or bricks[2][1] != 0 or bricks[2][2] != 0 or bricks[2][3] != 0):
-                    #             container_x = container_x - 1                        
-                        
-                    #     else:
-                    #         container_x = container_x - 1
-                    
-                    # # 碰到磚塊.
-                    # if (not ifCopyToBricksArray()):
-                    #     container_x = container_x - 1
-                # """
 
             #-----------------------------------------------------------------
             # 判斷放開按鈕
@@ -631,18 +586,6 @@ def gaming():
                 if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                     # 恢復正常下降速度.
                     brick_down_speed = BRICK_DOWN_SPEED_MAX
-
-                # if event.key == pygame.K_a:
-                #     if time_leftKey is not None and (time.time() - time_leftKey) >= PRESS_KEY_DELAY:
-                #         print("左鍵長按 (release)")
-
-                #     time_leftKey = None
-                    
-                # if event.key == pygame.K_d:
-                #     if time_rightKey is not None and (time.time() - time_rightKey) >= PRESS_KEY_DELAY:
-                #         print("右鍵長按 (release)")
-                    
-                #     time_rightKey = None
 
         #---------------------------------------------------------------------    
         # 清除畫面.
@@ -806,10 +749,10 @@ def gaming():
         showFont( u"本局連線數", 588, 260, color_block)
         showFont( str(int(lines_number)), 588, 290, color_block)
 
-        # 顯示FPS.
+        # 顯示 FPS.
         # 除錯訊息.
         if(debug_message):    
-            showFont( u"FPS:" + str(clock.get_fps()), 6, 0, color_gray_green)    
+            showFont( u"FPS: " + str(clock.get_fps()), 6, 0, color_block)    
 
         # 更新畫面.
         pygame.display.update()
