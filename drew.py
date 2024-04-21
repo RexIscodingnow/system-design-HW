@@ -1,3 +1,7 @@
+"""
+Reference source code: https://github.com/channel2007/Python_Tetris
+"""
+
 # encoding: utf-8
 
 import pygame
