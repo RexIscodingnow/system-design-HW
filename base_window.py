@@ -18,7 +18,10 @@ class BaseWindow(tk.Tk):
                  minSize: tuple[int] | None = None
                  ) -> None:
         """
+        This is a template for any window to inherit.
+
         Parameters:
+
             - win_title: Set the title of the window
 
             - width: The width of the window size
@@ -33,6 +36,7 @@ class BaseWindow(tk.Tk):
                        It sets both similar to `min_width` and `min_height`.
             
         Properties:
+
             - image_path: Given an image path for background.
                           It can use relative path, absolute path to read it.
             
@@ -99,6 +103,7 @@ class BaseWindow(tk.Tk):
         """
         Position the window at the center screen coordinates.
         """
+        
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         center_x = (screen_width - self.width) // 2
@@ -107,7 +112,45 @@ class BaseWindow(tk.Tk):
         self.geometry(f"{self.width}x{self.height}+{center_x}+{center_y}")
 
 
-def all_widgets_map(window: BaseWindow) -> dict[str, tk.Widget]:
+    def focus_in_entry(self, entry: tk.Entry):
+        """
+        The entry is cleared when the focus is on it (the user is typing something)
+
+        Parameters:
+
+            - entry: an input textbox
+        """
+        
+        if entry.cget('state') == 'disabled':
+            entry.configure(state='normal')
+            entry.delete(0, 'end')
+
+            if entry.winfo_name() == "entry-pwd":
+                entry.config(show="*")
+
+
+    def focus_out_entry(self, entry: tk.Entry, placeholder: str):
+        """
+        The entry shows a placeholder message when the user is not typing.
+
+        Parameters:
+
+            - entry: an input textbox
+            
+            - placeholder: 
+        """
+        
+        if entry.get() == "":
+            entry.insert(0, placeholder)
+            entry.configure(state='disabled')
+
+            if entry.winfo_name() == "entry-pwd":
+                entry.config(show="")
+
+
+
+
+def all_widgets_map(window: tk.Tk) -> dict[str, tk.Widget]:
     """
     Return a dictionary of all widget names and objects in the specified window
     
@@ -125,8 +168,5 @@ def all_widgets_map(window: BaseWindow) -> dict[str, tk.Widget]:
         all_widgets[widget_name] = widget
 
     return all_widgets
-
-
-
 
 
