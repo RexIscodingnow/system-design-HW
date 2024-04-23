@@ -1,3 +1,10 @@
+"""
+
+TODO: 完成 select()
+
+"""
+
+
 import sqlite3
 import pathlib
 
@@ -20,6 +27,8 @@ def checkLength(params: dict[str, Iterable[int | float | str | object | None]]) 
     if params is None or len(params.items()) == 0:
         return False
     
+    print(len(params.values()))
+    
     previous = None
 
     for value in params.values():
@@ -35,9 +44,35 @@ def checkLength(params: dict[str, Iterable[int | float | str | object | None]]) 
     return True
 
 
-def exec_cmd_sql(sql_cmd: str, values: Iterable = [], exe_many = False):
+def exec_cmd_sql(sql_cmd: str, values: Iterable = [], *, db_path: str = "users.db", exe_many: bool = False):
+    """
+    Execute the sqlite script or command (one-line or multiple command)
+    
+    
+    Parameters:
+
+        - sql_cmd: SQLite script or command
+
+        >>> insert into `students`
+            (`name`, `major`, `score`)
+            values
+            ('Peter', 'Computer Science', 80)
+
+        >>> insert into `students`
+            (`name`, `major`, `score`)
+            values
+            ('Peter', 'Computer Science', 80), ('Razer', 'Mathematics', 75)
+
+        >>> CREATE TABLE IF NOT EXISTS `users` (
+                    `id`        INTEGER         PRIMARY KEY     AUTOINCREMENT,
+                    `email`     VARCHAR(100)    UNIQUE          NOT NULL,
+                    `password`  VARCHAR(20)     NOT NULL,
+            );
+
+        - values: 
+    """
     try:
-        conn = sqlite3.connect(pathlib.Path("users.db"))
+        conn = sqlite3.connect(pathlib.Path(db_path))
         cursor = conn.cursor()
 
         if exe_many:
@@ -45,6 +80,7 @@ def exec_cmd_sql(sql_cmd: str, values: Iterable = [], exe_many = False):
         else:
             cursor.execute(sql_cmd, values)
 
+        res_fetch = cursor.fetchall()
         conn.commit()
 
 
@@ -56,14 +92,20 @@ def exec_cmd_sql(sql_cmd: str, values: Iterable = [], exe_many = False):
     finally:
         conn.close()
 
+        if len(res_fetch) > 0:
+            return res_fetch, len(res_fetch)
+        
+        else:
+            return None, 0
+
 
 def insert(table_name: str, params: dict[str, Iterable[int | float | str | object | None]]):
     """
     Parameters:
         
-        -- table_name : 資料表名稱
+        - table_name: 資料表名稱
         
-        -- params : 插入欄位資料
+        - params: 插入欄位資料
 
             * insert columns `name`, `email`, `score`
             * 3 筆資料
@@ -72,8 +114,17 @@ def insert(table_name: str, params: dict[str, Iterable[int | float | str | objec
                     'email': ('abc@gmail.com', 'black@email.com'),
                     'score': (90, 65)
                 }
+            
+            Users table:
+            
+                    +--------+-----------------+-------+
+                    |  name  |      email      | score |
+                    +--------+-----------------+-------+
+                    |  大黃  |  abc@gmail.com  |   90  |
+                    +--------+-----------------+-------+
+                    |  小黑  | black@email.com |   65  |
+                    +--------+-----------------+-------+
     """
-    # TODO: 測試插入狀態
     if checkLength(params) == False:
         print("插入的數量不一致")
         return
@@ -86,14 +137,20 @@ def insert(table_name: str, params: dict[str, Iterable[int | float | str | objec
     ps = "("
     columns = []
     insert_data = []
-    
+    fields_data: list[Iterable] = []    # for all fields data
+
+
     for key, val in params.items():
         columns.append(key)
-        
-        for item in val:
-            insert_data.append(item)
+        fields_data.append(val)
         
         ps += "?,"
+
+
+    for j in range(len(fields_data[0])):
+        for i in range(len(fields_data)):
+            insert_data.append(fields_data[i][j])
+    
 
     ps = ps[:-1]
     ps += "),"
@@ -111,35 +168,63 @@ def insert(table_name: str, params: dict[str, Iterable[int | float | str | objec
 
 
 def select(table_name: str,
-           fields_queryItems: Iterable[tuple[str, int | float | str | object | None]] = [],
-           params: dict[str, str] = {},
-           ):
+           fields: Iterable[str] = [],
+           search_vals: Iterable[int | float | str | object] = [],
+           conditions: Iterable[str] = [],
+           *,
+           aggregation: dict[str, Iterable[str]] = {}
+           ) -> Iterable[int | float | str | object] | None:
     """
-    Arguments:
+    Parameters:
         
-        -- table_name: 資料表名稱
+        - table_name: 資料表名稱
+
+        - fields: 資料表的欄位名稱
+
+        - search_vals: 要搜尋的參數
         
-        -- params: 聚合函數
-        >>> {"sort": field_name}
+        - aggregation: 聚合函數 (Aggregation function)
+        
+        >>> {
+                "<Column name>" : "<Aggregation function>"
+            }
+
+        >>> {
+                "score": ["sort", "count"]   # 對 score 的資料做排序、計算數量
+            }
+
+            Users table:
+
+                    +---------+-----------------+--------+
+                    |  name   |      email      | score  |
+                    +---------+-----------------+--------+
+                    |  John   |  abc@gmail.com  |   90   |
+                    +---------+-----------------+--------+
+                    |  Emily  | black@email.com |   65   |
+                    +---------+-----------------+--------+
     """
+    
+    if len(fields) != len(search_vals):
+        return None
+
     columns = ""
     where = ""
-    conditions = {
-        "equal": "=",
-        "not-eq": "<>",
-        "greater": ">",
-        "less": "<",
-        "greater-eq": ">=",
-        "less-eq": "<="
-    }
+    # conditions = {
+    #     "equal": "=",
+    #     "not-eq": "<>",
+    #     "greater": ">",
+    #     "less": "<",
+    #     "greater-eq": ">=",
+    #     "less-eq": "<="
+    # }
 
-    if len(fields_queryItems) > 0:
-        for i in range(len(fields_queryItems)):
-            item = fields_queryItems[i]
+    if len(fields) > 0:
+        for i in range(len(fields)):
+            item = fields[i]
             columns += item[0]
 
-            if i < len(fields_queryItems) - 2:
-                columns += ", "
+            if i < len(fields) - 2:
+                columns += ","
     else:
         columns = "*"
 
