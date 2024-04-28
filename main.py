@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import bcrypt
 import pathlib
@@ -33,16 +34,16 @@ class Login_SignUp_Window(BaseWindow, tk.Toplevel):
 
         """ 所有元件設置 """
 
-        lbl_title = tk.Label(self, font=FONT_TEXT, text="登入帳號")
+        lbl_title = tk.Label(self, font=FONT_TEXT, text="登入/註冊帳號")
         self.entry_email = tk.Entry(self, font=FONT_ENTRY)
         self.entry_username = tk.Entry(self, font=FONT_ENTRY)
         self.entry_password = tk.Entry(self, font=FONT_ENTRY, name="entry-pwd")
-        self.submit_btn = tk.Button(self, font=FONT_BTN, text="登入")
-        self.register_btn = tk.Button(self, font=FONT_BTN, text="註冊")
+        self.submit_btn = tk.Button(self, font=FONT_BTN, text="登入", command=self.login_user)
+        self.register_btn = tk.Button(self, font=FONT_BTN, text="註冊", command=self.register_user)
 
 
         lbl_title.place(
-            x = self.winfo_width() + 190,    y =  10
+            x = self.winfo_width() + 160,    y =  10
         )
         self.entry_email.place(
             x = self.winfo_width() + 100,    y =  80
@@ -82,17 +83,65 @@ class Login_SignUp_Window(BaseWindow, tk.Toplevel):
         self.entry_username.bind('<FocusOut>', lambda event: self.focus_out_entry(self.entry_username, PLACEHOLDER_USERNAME))
         self.entry_password.bind('<FocusOut>', lambda event: self.focus_out_entry(self.entry_password, PLACEHOLDER_PASSWORD))
 
+        # messagebox.showinfo("登入與註冊操作", "註冊帳號，請輸入全部的資訊\n登入帳號，只需要輸入 email 與密碼")
 
+    
+    def validate_email(self, email):
+        regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
+        
+        if re.fullmatch(regex, email):
+            return True
+        else:
+            return False
+
+    
     def register_user(self):
-        __email = self.entry_email.get()
-        __username = self.entry_username.get()
-        __password = self.entry_password.get()
+        if self.entry_email.cget('state') == 'disabled' or \
+            self.entry_username.cget('state') == 'disabled' or \
+                self.entry_password.cget('state') == 'disabled':
+            return
+        
+        email = self.entry_email.get()
+        username = self.entry_username.get()
+        password = self.entry_password.get()
+        
+        if self.entry_email.cget('state') != 'disabled' and not self.validate_email(email):
+            messagebox.showerror("註冊失敗 !", "Email 的格式錯誤 ! 請重新檢查格式是否正確")
+            return
 
         # TODO: bcrypt
+        hashed_pwd = bcrypt.hashpw(bytes(password.encode()), bcrypt.gensalt())
+        access_db.insert(
+            table_name="users",
+            params={
+                "username": [username],
+                "email": [email],
+                "password": [hashed_pwd]
+            }
+        )
 
 
     def login_user(self):
-        pass
+        email = self.entry_email.get()
+        password = self.entry_password.get()
+
+        fetch_result, _ = access_db.select(
+            table_name="users",
+            search_vals=[("email", email)],
+            conditions=["="],
+            fetch_columns=["email", "password"]
+        )
+
+        if not fetch_result:
+            return
+
+        hashed_pwd = fetch_result[0][1]
+        print(hashed_pwd)
+
+        if bcrypt.checkpw(password.encode(), hashed_pwd):
+            messagebox.showinfo("登入", "登入成功")
+        else:
+            messagebox.showwarning("登入", "密碼錯誤")
 
 
 class MainWindow(BaseWindow):
