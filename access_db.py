@@ -11,7 +11,7 @@ import pathlib
 from typing import Iterable
 
 
-def checkLength(params: dict[str, Iterable[int | float | str | object | None]]) -> bool:
+def __checkLength(params: dict[str, Iterable[int | float | str | object | None]]) -> bool:
     """
     Check length.
 
@@ -51,8 +51,8 @@ def exec_cmd_sql(sql_cmd: str, values: Iterable = [], *, db_path: str = "users.d
 
     Return values:
         
-        - tuple: 1. First element is a result fetched from the target table.
-                 2. Secondly is the length of the fetch result.
+        - list: 1. First element is a result fetched from the target table.
+                2. Secondly is the length of the fetch result.
     
     Parameters:
 
@@ -92,10 +92,11 @@ def exec_cmd_sql(sql_cmd: str, values: Iterable = [], *, db_path: str = "users.d
             ('Peter', 'Computer Science', 80)
 
         - db_path: The database path
-        - exe_many: To execute multiple SQL command if it is set to `True`.
+        - exe_many: To execute multiple line SQL command if it is set to `True`.
     """
     try:
-        res_fetch = []
+        res_fetch = None
+
         conn = sqlite3.connect(pathlib.Path(db_path))
         cursor = conn.cursor()
 
@@ -103,7 +104,7 @@ def exec_cmd_sql(sql_cmd: str, values: Iterable = [], *, db_path: str = "users.d
             cursor.executemany(sql_cmd, values)
         else:
             cursor.execute(sql_cmd, values)
-
+        
         res_fetch = cursor.fetchall()
         conn.commit()
 
@@ -116,11 +117,11 @@ def exec_cmd_sql(sql_cmd: str, values: Iterable = [], *, db_path: str = "users.d
     finally:
         conn.close()
 
-        if len(res_fetch) > 0:
+        if res_fetch is not None:
             return res_fetch, len(res_fetch)
         
         else:
-            return None, 0
+            return [], 0
 
 
 def insert(table_name: str, params: dict[str, Iterable[int | float | str | object | None]]):
@@ -131,6 +132,10 @@ def insert(table_name: str, params: dict[str, Iterable[int | float | str | objec
         
         - params: 插入欄位資料
 
+            - key: column name
+            - values: insert values
+
+
             * insert columns `name`, `email`, `score`
                 
                 * 2 筆資料
@@ -139,6 +144,18 @@ def insert(table_name: str, params: dict[str, Iterable[int | float | str | objec
                     'email': ('abc@gmail.com', 'black@email.com'),
                     'score': (90, 65)
                 }
+
+            * sqlite script:
+
+                insert into `Users` 
+                
+                    (`name`, `email`, `score`) 
+                
+                values 
+                    
+                    (大黃, abc@gmail.com, 90),
+
+                    (小黑, black@email.com, 65)
             
         Example `Users` table:
             
@@ -150,7 +167,7 @@ def insert(table_name: str, params: dict[str, Iterable[int | float | str | objec
                     |  小黑  | black@email.com |   65  |
                     +--------+-----------------+-------+
     """
-    if checkLength(params) == False:
+    if __checkLength(params) == False:
         print("插入的數量不一致")
         return
     
@@ -183,7 +200,7 @@ def insert(table_name: str, params: dict[str, Iterable[int | float | str | objec
     
     sql_cmd = f"""
                 
-                insert into `{table_name}` {tuple(columns)} values {(ps * times)[:-1]}
+                insert into `{table_name}` {tuple(columns)} values {(ps * times)[:-1]};
                 
                 """.replace("'", '`')
     
@@ -216,9 +233,9 @@ def select(table_name: str,
 
             SELECT * FROM `users`
             WHERE
-            `name` <condition 1> `John`
+                `name` <condition 1> `John`
             <condition 2>
-            `score` <condition 2> 90 
+                `score` <condition 3> 90 
 
         - conditions: 條件判斷運算子
 
@@ -234,24 +251,27 @@ def select(table_name: str,
 
         最後指令為  
                     SELECT * FROM `users`
+                    
                     WHERE
-                    `name` = `John`
+                        `name` = `John`
                     AND
-                    `score` > 90
+                        `score` > 90
 
         
         - fetch_columns: 搜尋的指令欄位
 
-        - aggregation: 聚合函數 (Aggregation function)
+        - aggregation: 聚合函數 (Aggregation function) 或其他指令
         
         >>> {
-                "<Aggregation function>" : "<Column name>"
+                "<Aggregation function>" : ["<Column name>"]
             }
 
-        * 對 score 的資料做排序、計算數量
+        1. 對 score 的資料做排序 (降序)、計算數量
+        2.    email 做排序
+
         >>> {
-                "sort": score,
-                "count": score
+                "order by": ["score DESC", "email"],
+                "count": ["score"]
             }
 
         Example `Users` table:
@@ -266,26 +286,62 @@ def select(table_name: str,
     """
 
     columns = ""
+    sql_cmd = f"SELECT"
 
-    n = len(fetch_columns)
+    # ===================================================================
+    
+    add_cmd = ""
+
+    FUNCTIONS = {
+        "AVG", "COUNT", "MAX", "MIN", "SUM", 
+        "TOTAL", "ABS", "RANDOM", "UPPER", "LOWER",
+        "ORDER BY"
+    }
+
+    # TODO: test the edge case
+    # 
+    # aggregation functions
+    if aggregation:
+        for func, cols in aggregation.items():
+            func = func.upper()
+
+            if func not in FUNCTIONS:
+                continue
+
+            else:
+                if func == "COUNT" and not cols:
+                    sql_cmd += " COUNT(*)"
+                    continue
+                elif func == "COUNT" and cols:
+                    sql_cmd += " COUNT(" + ','.join(
+                                    [[f"{col}" for col in cols]]
+                                ) + ") "
+
+                if func == "ORDER BY" and cols:
+                    add_cmd += " ORDER BY " + ' '.join(
+                                    [f"{col}" for col in cols]
+                                )
+                
+    # ===================================================================
 
     if fetch_columns:
         columns = ','.join([f"`{str(col)}`" for col in fetch_columns])
     else:
-        columns = "*"
+        if not aggregation.get("COUNT"):
+            columns = " *"
 
+    # ===================================================================
+
+    sql_cmd += f"{columns} FROM `{table_name}`"
+
+    values = []
+
+    # TODO: test the edge case
+    # 
     # select <columns> from <table name> where <conditions>
     # 
     # <conditions> : <column name> < =, <> (not equal), >, <, between, like, in > <value>
-
-    sql_cmd = f"SELECT {columns} FROM `{table_name}`"
-
-    # TODO: test the edge case
     if search_vals and conditions:
-        if len(search_vals) > 1 and len(search_vals) == len(conditions):
-            print("判斷條件 與 運算子 數目不一致")
-            return
-
         sql_cmd += " WHERE "
 
         for i, (col, val) in enumerate(search_vals):
@@ -293,21 +349,18 @@ def select(table_name: str,
                 sql_cmd += f" {conditions[i]} "
                 continue
 
-            sql_cmd += f"`{col}` {conditions[i]} '{val}'"
+            sql_cmd += f"`{col}` {conditions[i]} ?"
+            values.append(val)
 
         if len(search_vals) > 1:
-            sql_cmd += f"`{col}` {conditions[i+1]} '{val}'"
+            sql_cmd += f"`{col}` {conditions[i+1]} ?"
+            values.append(val)
 
+    sql_cmd += add_cmd
 
-    # TODO: aggregation functions
-    if aggregation:
-        for col, funcs in aggregation.items():
-            for func in funcs:
-                pass
-
-    print(sql_cmd)
+    print("", sql_cmd, "  values:", values)
     
-    res = exec_cmd_sql(sql_cmd)
+    res = exec_cmd_sql(sql_cmd, values)
 
     return res
 
