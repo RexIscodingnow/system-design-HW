@@ -5,20 +5,22 @@ Reference source code: https://github.com/channel2007/Python_Tetris
 # encoding: utf-8
 import os, sys, random
 import time
-import pygame 
+import pygame
+
+from tkinter import messagebox
 from pygame.locals import *
 from drew import *
 from params.color import *
 
 # 偵數
-FPS = 30
+FPS = 60
 # 按鍵延遲時間
 PRESS_KEY_DELAY = 0.5  # 秒
 
 # 常數-磚塊快速下降速度.
-BRICK_DROP_RAPIDLY   = 0.01
+BRICK_DROP_RAPIDLY   = 0.05
 # 常數-磚塊正常下降速度.
-BRICK_DOWN_SPEED_MAX = 0.8
+BRICK_DOWN_SPEED_MAX = 0.9
 
 # 視窗大小.
 canvas_width = 800
@@ -389,10 +391,11 @@ def clearBrick():
 
 
 def moveLeftBrick():
-    global press_key, container_x, container_y
+    global container_x, container_y
 
     #-----------------------------------------------------------------
     # 移動方塊-左: left-arraw
+    # """
     container_x = container_x - 1
     
     if (container_x < 0):
@@ -409,13 +412,17 @@ def moveLeftBrick():
     # 碰到磚塊.
     if (not ifCopyToBricksArray()):
         container_x = container_x + 1
+    # """
+
 
 def moveRightBrick():
-    global press_key, container_x, container_y
+    global container_x, container_y
     
     #-----------------------------------------------------------------
     # 移動方塊-右: right-arraw
+    # """
     container_x = container_x + 1
+
     if (container_x > 6):
         if (container_x == 7):
             if (bricks[3][0] != 0 or bricks[3][1] != 0 or bricks[3][2] != 0 or bricks[3][3] != 0):
@@ -431,64 +438,74 @@ def moveRightBrick():
     # 碰到磚塊.
     if (not ifCopyToBricksArray()):
         container_x = container_x - 1
-
-#-------------------------------------------------------------------------
-# 初始.
-pygame.init()
-
-# 顯示Title.
-pygame.display.set_caption(u"俄羅斯方塊遊戲")
-
-# 建立畫佈大小.
-# 全螢幕模式.
-canvas = pygame.display.set_mode((canvas_width, canvas_height))
-
-# 視窗模式.
-#canvas = pygame.display.set_mode((canvas_width, canvas_height))
-
-# 時脈.
-clock = pygame.time.Clock()
-
-# 查看系統支持那些字體
-#print(pygame.font.get_fonts())
-
-# 設定字型-黑體.
-font = pygame.font.SysFont("simsunnsimsun", 24)
-
-bricksDefinition()
-
-# 將繪圖方塊放入陣列.
-for y in range(20):
-    for x in range(10):
-        bricks_list[x][y] = Box(pygame, canvas, "brick_x_" + str(x) + "_y_" + str(y), [ 0, 0, 26, 26], color_gray_block)
-
-# 將繪圖方塊放入陣列.
-for y in range(4):
-    for x in range(4):
-        bricks_next_object[x][y] = Box(pygame, canvas, "brick_next_x_" + str(x) + "_y_" + str(y), [ 0, 0, 26, 26], color_gray_block)
-
-# 背景區塊.
-background = Box(pygame, canvas, "background", [ 278, 18, 282, 562], color_gray)
-
-# 背景區塊.
-background_bricks_next = Box(pygame, canvas, "background_bricks_next", [ 590, 50, 114, 114], color_gray)
-
-# 方塊編號(1~7).
-brick_next_id = random.randint( 1, 7)
-# 產生新磚塊.
-brickNew()
+    # """
 
 
-def gaming():
-    global container_x, container_y, game_mode, debug_message
+
+def initial():
+    global clock, canvas, font, background, background_bricks_next, brick_next_id
+
+    #-------------------------------------------------------------------------
+    # 初始.
+    pygame.init()
+
+    # 顯示Title.
+    pygame.display.set_caption(u"俄羅斯方塊遊戲")
+
+    # 建立畫佈大小.
+    # 全螢幕模式.
+    canvas = pygame.display.set_mode((canvas_width, canvas_height))
+
+    # 視窗模式.
+    #canvas = pygame.display.set_mode((canvas_width, canvas_height))
+
+    # 時脈.
+    clock = pygame.time.Clock()
+
+    # 查看系統支持那些字體
+    #print(pygame.font.get_fonts())
+
+    # 設定字型-黑體.
+    # font = pygame.font.SysFont("simsunnsimsun", 24)
+    font = pygame.font.Font(os.path.join("文字", "font.ttf"), 24)
+
+    bricksDefinition()
+
+    # 將繪圖方塊放入陣列.
+    for y in range(20):
+        for x in range(10):
+            bricks_list[x][y] = Box(pygame, canvas, "brick_x_" + str(x) + "_y_" + str(y), [ 0, 0, 26, 26 ], color_gray_block)
+
+    # 將繪圖方塊放入陣列.
+    for y in range(4):
+        for x in range(4):
+            bricks_next_object[x][y] = Box(pygame, canvas, "brick_next_x_" + str(x) + "_y_" + str(y), [ 0, 0, 26, 26 ], color_gray_block)
+
+    # 背景區塊.
+    background = Box(pygame, canvas, "background", [ 278, 18, 282, 562 ], color_gray)
+
+    # 背景區塊.
+    background_bricks_next = Box(pygame, canvas, "background_bricks_next", [ 590, 50, 114, 114 ], color_gray)
+
+    # 方塊編號(1~7).
+    brick_next_id = random.randint(1, 7)
+    # 產生新磚塊.
+    brickNew()
+
+
+def main():
+    initial()
+
+    global container_x, container_y, game_mode, debug_message, game_over
     global bricks, brick_down_speed, brick_id, brick_state, press_key
 
     running = True
-
-    time_leftKey = None
-    time_rightKey = None
     time_temp = time.time()
     time_now = 0
+
+    msgbox_flag = False
+    game_over = False
+    pause_game = False
     
     
     #-------------------------------------------------------------------------    
@@ -504,17 +521,18 @@ def gaming():
         #---------------------------------------------------------------------
         press_key = pygame.key.get_pressed()
 
-        for event in pygame.event.get():
+        for event  in pygame.event.get():
             # 離開遊戲.
             if event.type == pygame.QUIT:
-                running = False        
+                running = False
 
             # 判斷按下按鈕
             if event.type == pygame.KEYDOWN:
                 #-----------------------------------------------------------------
                 # 判斷按下 ESC 按鈕
                 if event.key == pygame.K_ESCAPE:
-                    running = False
+                    # running = False
+                    pause_game = not pause_game
                 
                 # 除錯訊息開關: b
                 elif event.key == pygame.K_b:
@@ -522,12 +540,12 @@ def gaming():
 
                 #-----------------------------------------------------------------
                 # 變換方塊-上: up-arraw
-                elif (event.key == pygame.K_UP or event.key == pygame.K_w) and game_mode == 0:
+                if (event.key == pygame.K_UP or event.key == pygame.K_w) and game_mode == 0:
                     # 在右邊界不能旋轉.
                     if (container_x == 8):
                         break
                     
-                    # 判斷磚塊N1、N2、I.
+                    # 判斷磚塊 N1、N2、I.
                     if (brick_id == 1 or brick_id == 2 or brick_id == 7):
                         # 長條方塊旋轉例外處理.
                         if (brick_id == 7):
@@ -569,7 +587,7 @@ def gaming():
 
                 #-----------------------------------------------------------------
                 # 快速下降-下: down-arraw
-                elif (event.key == pygame.K_DOWN or event.key == pygame.K_s) and game_mode == 0:
+                elif (event.key in [pygame.K_DOWN, pygame.K_s]) and game_mode == 0:
                     # 磚塊快速下降.
                     brick_down_speed = BRICK_DROP_RAPIDLY
                 
@@ -590,6 +608,24 @@ def gaming():
                 if event.key == pygame.K_DOWN or event.key == pygame.K_s:
                     # 恢復正常下降速度.
                     brick_down_speed = BRICK_DOWN_SPEED_MAX
+                    
+                    # print("bricks array:\n[", sep='')
+                    # print("\t", *bricks_array, sep='\n\t')
+                    # print("]")
+
+        if pause_game:
+            continue
+        
+        if game_over:
+            if pygame.key.get_pressed()[pygame.K_r]:
+                msgbox_flag = False
+                game_over = False
+                resetGame()
+            
+            elif not msgbox_flag and "ok" == messagebox.showinfo("Game Over", "遊戲結束 ! 若要重新開始，請按下鍵盤 R 鍵新開一局"):
+                msgbox_flag = True
+            
+            continue
 
         #---------------------------------------------------------------------    
         # 清除畫面.
@@ -605,7 +641,7 @@ def gaming():
                 # 碰到磚塊.
                 if (not ifCopyToBricksArray()):
                     #產生新塊.
-                    brickNew()            
+                    brickNew()
                 
                 # 轉換定義方塊到方塊陣列(bricks).
                 transformToBricks( brick_id, brick_state)
@@ -768,4 +804,5 @@ def gaming():
     quit()
 
 
-gaming()
+if __name__ == "__main__":
+    main()
