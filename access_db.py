@@ -365,3 +365,26 @@ def select(table_name: str,
     return res
 
 
+def update(table_name: str, params: dict[str, int | float | str | object]):
+    if not params.get("email"):
+        print("there is not email to query")
+        return
+
+    sql_cmd = f"UPDATE `{table_name}` SET "
+    values = []
+
+    for key, val in params.items():
+        if key != "email":
+            values.append(val)
+            sql_cmd += f"`{key}` = ?,"
+
+        else:
+            is_email = val
+
+    values.append(is_email)
+
+    sql_cmd = sql_cmd[:-1]
+    sql_cmd += f"WHERE email = ?"
+    
+    exec_cmd_sql(sql_cmd, values)
+
