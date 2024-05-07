@@ -3,28 +3,41 @@ import re
 import time
 import bcrypt
 import pathlib
+import platform
 import access_db
 import tkinter as tk
+
+# import pygame
+# import play_tetris_ref as tetris
 
 from config import *
 from tkinter import messagebox
 from base_window import BaseWindow, all_widgets_map
 
 
+# TODO: 改架構:
+#               1. 登入後 呼叫 tetris.main
+#               2. 重新分開 Sign up, Login window
 
-class Login_SignUp_Window(BaseWindow, tk.Toplevel):
+
+class InfoWindow(BaseWindow, tk.Toplevel):
     def __init__(self):
-        super().__init__(
-            win_title = "用戶登入 / 註冊",
-            height = 300
-        )
+        super().__init__("登入/註冊提示", 300, 150)
+        self.resizable(False, False)
+
+        LBL_MSG = "註冊請輸入全部資訊\n登入則只需要 Email 與密碼即可"
+        lbl = tk.Label(self, text=LBL_MSG, font=FONT_INFO, bg="skyblue", width=self.width, height=self.height)
+        lbl.pack()
+
+
+class SignUpWindow(BaseWindow, tk.Toplevel):
+    def __init__(self):
+        super().__init__("用戶註冊", height=300)
 
         self.resizable(False, False)
         self.centerToScreen()
-        
-        # ==============================================================
 
-        """ 輸入框顯示訊息 """
+        # ==============================================================
 
         PLACEHOLDER_EMAIL = "輸入電子信箱"
         PLACEHOLDER_USERNAME = "輸入使用者名稱"
@@ -32,13 +45,10 @@ class Login_SignUp_Window(BaseWindow, tk.Toplevel):
 
         # ==============================================================
 
-        """ 所有元件設置 """
-
         lbl_title = tk.Label(self, font=FONT_TEXT, text="登入/註冊帳號")
         self.entry_email = tk.Entry(self, font=FONT_ENTRY)
         self.entry_username = tk.Entry(self, font=FONT_ENTRY)
         self.entry_password = tk.Entry(self, font=FONT_ENTRY, name="entry-pwd")
-        self.submit_btn = tk.Button(self, font=FONT_BTN, text="登入", command=self.login_user)
         self.register_btn = tk.Button(self, font=FONT_BTN, text="註冊", command=self.register_user)
 
 
@@ -54,11 +64,8 @@ class Login_SignUp_Window(BaseWindow, tk.Toplevel):
         self.entry_password.place(
             x = self.winfo_width() + 100,    y = 180
         )
-        self.submit_btn.place(
-            x = self.winfo_width() + 160,    y = 230
-        )
         self.register_btn.place(
-            x = self.winfo_width() + 260,    y = 230
+            x = self.width // 2 - 30,    y = 230
         )
 
         self.entry_email.insert(0, PLACEHOLDER_EMAIL)
@@ -83,9 +90,7 @@ class Login_SignUp_Window(BaseWindow, tk.Toplevel):
         self.entry_username.bind('<FocusOut>', lambda event: self.focus_out_entry(self.entry_username, PLACEHOLDER_USERNAME))
         self.entry_password.bind('<FocusOut>', lambda event: self.focus_out_entry(self.entry_password, PLACEHOLDER_PASSWORD))
 
-        # messagebox.showinfo("登入與註冊操作", "註冊帳號，請輸入全部的資訊\n登入帳號，只需要輸入 email 與密碼")
 
-    
     def validate_email(self, email):
         regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
         
@@ -94,7 +99,6 @@ class Login_SignUp_Window(BaseWindow, tk.Toplevel):
         else:
             return False
 
-    
     def register_user(self):
         if self.entry_email.cget('state') == 'disabled' or \
             self.entry_username.cget('state') == 'disabled' or \
@@ -116,15 +120,97 @@ class Login_SignUp_Window(BaseWindow, tk.Toplevel):
             params={
                 "username": [username],
                 "email": [email],
-                "password": [hashed_pwd]
+                "password": [hashed_pwd],
+                "score": [0]
             }
         )
 
+        messagebox.showinfo("註冊", "註冊成功 ! 請關閉註冊視窗 !")
+
+
+class LoginWindow(BaseWindow, tk.Toplevel):
+    def __init__(self):
+        super().__init__(
+            win_title = "用戶登入 / 註冊",
+            height = 300
+        )
+
+        self.resizable(False, False)
+        self.centerToScreen()
+        
+        # ==============================================================
+
+        """ 輸入框顯示訊息 """
+
+        PLACEHOLDER_EMAIL = "輸入電子信箱"
+        PLACEHOLDER_PASSWORD = "輸入密碼"
+
+        # ==============================================================
+
+        """ 所有元件設置 """
+
+        lbl_title = tk.Label(self, font=FONT_TEXT, text="登入/註冊帳號")
+        self.entry_email = tk.Entry(self, font=FONT_ENTRY)
+        self.entry_password = tk.Entry(self, font=FONT_ENTRY, name="entry-pwd")
+        self.submit_btn = tk.Button(self, font=FONT_BTN, text="登入", command=self.login_user)
+        self.register_btn = tk.Button(self, font=FONT_BTN, text="註冊", command=self.register_user)
+
+
+        lbl_title.place(
+            x = 160,    y =  10
+        )
+        self.entry_email.place(
+            x = 100,    y =  80
+        )
+        self.entry_password.place(
+            x = 100,    y = 150
+        )
+        self.submit_btn.place(
+            x = 160,    y = 230
+        )
+        self.register_btn.place(
+            x = 260,    y = 230
+        )
+
+        self.entry_email.insert(0, PLACEHOLDER_EMAIL)
+        self.entry_email.configure(state='disabled')
+        self.entry_password.insert(0, PLACEHOLDER_PASSWORD)
+        self.entry_password.configure(state='disabled')
+
+        # ---------------------------------------------------------
+
+        # 滑鼠左鍵點擊: 消除顯示訊息
+        self.entry_email.bind('<Button-1>', lambda event: self.focus_in_entry(self.entry_email))
+        self.entry_password.bind('<Button-1>', lambda event: self.focus_in_entry(self.entry_password))
+        
+        # ---------------------------------------------------------
+        
+        # 離開目標輸入框: 重新顯示訊息
+        self.entry_email.bind('<FocusOut>', lambda event: self.focus_out_entry(self.entry_email, PLACEHOLDER_EMAIL))
+        self.entry_password.bind('<FocusOut>', lambda event: self.focus_out_entry(self.entry_password, PLACEHOLDER_PASSWORD))
+
+    
+    def validate_email(self, email):
+        regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
+        
+        if re.fullmatch(regex, email):
+            return True
+        else:
+            return False
+
+    def register_user(self):
+        win = SignUpWindow()
+        win.mainloop()
+        
 
     def login_user(self):
         email = self.entry_email.get()
         password = self.entry_password.get()
-
+        
+        if self.entry_email.cget('state') != 'disabled' and not self.validate_email(email):
+            messagebox.showerror("註冊失敗 !", "Email 的格式錯誤 ! 請重新檢查格式是否正確")
+            return
+        
         fetch_result, _ = access_db.select(
             table_name="users",
             search_vals=[("email", email)],
@@ -139,25 +225,63 @@ class Login_SignUp_Window(BaseWindow, tk.Toplevel):
         print(hashed_pwd)
 
         if bcrypt.checkpw(password.encode(), hashed_pwd):
-            messagebox.showinfo("登入", "登入成功")
+            messagebox.showinfo("登入", "登入成功 ! 進入遊戲 !")
+            info_win.destroy()
+            self.destroy()
+
         else:
-            messagebox.showwarning("登入", "密碼錯誤")
+            messagebox.showwarning("登入", "密碼錯誤 !")
 
 
 class MainWindow(BaseWindow):
     def __init__(self):
         super().__init__(
             win_title="Main window",
-            height=700
+            width=600,
+            height=800
         )
         
         self.centerToScreen()
-        self.after(1000, self.open_login_window)
+        # self.after(1000, self.open_login_window)
+        # self.after(1200, self.open_info_window)
+
+        # 創建一個 Frame 來放置 pygame 畫面
+        embed = tk.Frame(self, width=500, height=500)
+        embed.pack()
+        
+
+    def closing_wins(self):
+        try:
+            info_win.destroy()
+
+        except Exception as e:
+            print(e)
+    
+        finally:
+            login_window.destroy()
 
 
     def open_login_window(self):
-        login_window = Login_SignUp_Window()
-        login_window.grab_set()
+        global login_window
+
+        login_window = LoginWindow()
+
+        try:
+            login_window.protocol("WM_DELETE_WINDOW", self.closing_wins)
+    
+        except Exception as e:
+            print(e)
+        
+        finally:
+            login_window.mainloop()
+
+
+    def open_info_window(self):
+        global info_win
+
+        info_win = InfoWindow()
+        info_win.mainloop()
+
 
 
 
@@ -175,8 +299,9 @@ if __name__ == "__main__":
     access_db.exec_cmd_sql(table_create)
 
     # win = MainWindow()
-    win = Login_SignUp_Window()
+    win = LoginWindow()
 
 
     win.mainloop()
+    # tetris.gaming()
 
