@@ -6,9 +6,10 @@ import pathlib
 import platform
 import access_db
 import tkinter as tk
+import threading as td
 
 # import pygame
-# import play_tetris_ref as tetris
+import play_tetris_ref as tetris
 
 from config import *
 from tkinter import messagebox
@@ -17,17 +18,14 @@ from base_window import BaseWindow, all_widgets_map
 
 # TODO: 改架構:
 #               1. 登入後 呼叫 tetris.main
-#               2. 重新分開 Sign up, Login window
 
-
-class InfoWindow(BaseWindow, tk.Toplevel):
-    def __init__(self):
-        super().__init__("登入/註冊提示", 300, 150)
-        self.resizable(False, False)
-
-        LBL_MSG = "註冊請輸入全部資訊\n登入則只需要 Email 與密碼即可"
-        lbl = tk.Label(self, text=LBL_MSG, font=FONT_INFO, bg="skyblue", width=self.width, height=self.height)
-        lbl.pack()
+def validate_email(email):
+    regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
+    
+    if re.fullmatch(regex, email):
+        return True
+    else:
+        return False
 
 
 class SignUpWindow(BaseWindow, tk.Toplevel):
@@ -91,14 +89,6 @@ class SignUpWindow(BaseWindow, tk.Toplevel):
         self.entry_password.bind('<FocusOut>', lambda event: self.focus_out_entry(self.entry_password, PLACEHOLDER_PASSWORD))
 
 
-    def validate_email(self, email):
-        regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
-        
-        if re.fullmatch(regex, email):
-            return True
-        else:
-            return False
-
     def register_user(self):
         if self.entry_email.cget('state') == 'disabled' or \
             self.entry_username.cget('state') == 'disabled' or \
@@ -109,7 +99,7 @@ class SignUpWindow(BaseWindow, tk.Toplevel):
         username = self.entry_username.get()
         password = self.entry_password.get()
         
-        if self.entry_email.cget('state') != 'disabled' and not self.validate_email(email):
+        if self.entry_email.cget('state') != 'disabled' and not validate_email(email):
             messagebox.showerror("註冊失敗 !", "Email 的格式錯誤 ! 請重新檢查格式是否正確")
             return
 
@@ -121,14 +111,15 @@ class SignUpWindow(BaseWindow, tk.Toplevel):
                 "username": [username],
                 "email": [email],
                 "password": [hashed_pwd],
-                "score": [0]
+                "score": [0],
+                "max_lines": [0]
             }
         )
 
         messagebox.showinfo("註冊", "註冊成功 ! 請關閉註冊視窗 !")
 
 
-class LoginWindow(BaseWindow, tk.Toplevel):
+class LoginWindow(BaseWindow):
     def __init__(self):
         super().__init__(
             win_title = "用戶登入 / 註冊",
@@ -189,14 +180,6 @@ class LoginWindow(BaseWindow, tk.Toplevel):
         self.entry_email.bind('<FocusOut>', lambda event: self.focus_out_entry(self.entry_email, PLACEHOLDER_EMAIL))
         self.entry_password.bind('<FocusOut>', lambda event: self.focus_out_entry(self.entry_password, PLACEHOLDER_PASSWORD))
 
-    
-    def validate_email(self, email):
-        regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
-        
-        if re.fullmatch(regex, email):
-            return True
-        else:
-            return False
 
     def register_user(self):
         win = SignUpWindow()
@@ -207,7 +190,7 @@ class LoginWindow(BaseWindow, tk.Toplevel):
         email = self.entry_email.get()
         password = self.entry_password.get()
         
-        if self.entry_email.cget('state') != 'disabled' and not self.validate_email(email):
+        if self.entry_email.cget('state') != 'disabled' and not validate_email(email):
             messagebox.showerror("註冊失敗 !", "Email 的格式錯誤 ! 請重新檢查格式是否正確")
             return
         
@@ -226,7 +209,6 @@ class LoginWindow(BaseWindow, tk.Toplevel):
 
         if bcrypt.checkpw(password.encode(), hashed_pwd):
             messagebox.showinfo("登入", "登入成功 ! 進入遊戲 !")
-            info_win.destroy()
             self.destroy()
 
         else:
@@ -250,37 +232,37 @@ class MainWindow(BaseWindow):
         embed.pack()
         
 
-    def closing_wins(self):
-        try:
-            info_win.destroy()
+    # def closing_wins(self):
+        # try:
+        #     info_win.destroy()
 
-        except Exception as e:
-            print(e)
+        # except Exception as e:
+        #     print(e)
     
-        finally:
-            login_window.destroy()
+        # finally:
+        #     login_window.destroy()
 
 
-    def open_login_window(self):
-        global login_window
+    # def open_login_window(self):
+    #     global login_window
 
-        login_window = LoginWindow()
+    #     login_window = LoginWindow()
 
-        try:
-            login_window.protocol("WM_DELETE_WINDOW", self.closing_wins)
+    #     try:
+    #         login_window.protocol("WM_DELETE_WINDOW", self.closing_wins)
     
-        except Exception as e:
-            print(e)
+    #     except Exception as e:
+    #         print(e)
         
-        finally:
-            login_window.mainloop()
+    #     finally:
+    #         login_window.mainloop()
 
 
-    def open_info_window(self):
-        global info_win
+    # def open_info_window(self):
+    #     global info_win
 
-        info_win = InfoWindow()
-        info_win.mainloop()
+    #     info_win = InfoWindow()
+    #     info_win.mainloop()
 
 
 
@@ -292,7 +274,8 @@ if __name__ == "__main__":
                             `email`       VARCHAR(100)    UNIQUE          NOT NULL,
                             `username`    VARCHAR(20)     NOT NULL,
                             `password`    VARCHAR(20)     NOT NULL,
-                            `score`       INTEGER
+                            `score`       INTEGER,
+                            `max_lines`   INTEGER
                     );
                    """
     
@@ -300,8 +283,6 @@ if __name__ == "__main__":
 
     # win = MainWindow()
     win = LoginWindow()
-
-
     win.mainloop()
-    # tetris.gaming()
-
+    
+    # tetris.main()
