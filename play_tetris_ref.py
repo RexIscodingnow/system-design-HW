@@ -454,11 +454,14 @@ def moveRightBrick():
 
 
 def initial():
-    global clock, canvas, font, background, background_bricks_next, brick_next_id
+    global clock, canvas, font, background, background_bricks_next, brick_next_id, bg_music
 
     #-------------------------------------------------------------------------
     # 初始.
     pygame.init()
+
+    pygame.mixer.init()
+    pygame.mixer.music.load("downloaded_audio.mp3")
 
     # 顯示Title.
     pygame.display.set_caption(u"俄羅斯方塊遊戲")
@@ -526,6 +529,8 @@ def main(email: str):
     lines_number_max = user[0][0][1]
     
     print(user)
+
+    pygame.mixer.music.play(-1)
     
     #-------------------------------------------------------------------------    
     # 主迴圈.
@@ -637,7 +642,10 @@ def main(email: str):
                     # print("]")
 
         if pause_game:
+            pygame.mixer.music.pause()
             continue
+        else:
+            pygame.mixer.music.unpause()
         
         if game_over:
             if press_key[pygame.K_r]:
@@ -809,6 +817,10 @@ def main(email: str):
                 pos_y = 20 + (posY * 28)
                 showFont( str_x, pos_x, pos_y, color_white)
 
+        else:
+            showFont("R 鍵重開一局", 15, 20, color_block)
+            showFont("ESC 鍵暫停遊戲", 15, 55, color_block)
+
         # ColorVer:顯示訊息.
         showFont( u"下次出現方塊", 588, 16, color_block)
 
@@ -819,10 +831,10 @@ def main(email: str):
         showFont( str(int(lines_number)), 588, 290, color_block)
 
         showFont( u"歷史最高分", 588, 340, color_block)
-        showFont( str(max(history_max_score, score)), 588, 460, color_block)
+        showFont( str(max(history_max_score, score)), 588, 370, color_block)
 
         showFont( u"當前分數", 588, 420, color_block)
-        showFont( str(score), 588, 370, color_block)
+        showFont( str(score), 588, 460, color_block)
 
         # 顯示 FPS.
         # 除錯訊息.
