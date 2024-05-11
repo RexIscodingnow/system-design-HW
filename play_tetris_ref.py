@@ -6,11 +6,13 @@ Reference source code: https://github.com/channel2007/Python_Tetris
 import os, sys, random
 import time
 import pygame
+import access_db
 
-from tkinter import messagebox
 from pygame.locals import *
 from drew import *
 from params.color import *
+from tkinter import messagebox
+
 
 # 偵數
 FPS = 60
@@ -21,6 +23,9 @@ PRESS_KEY_DELAY = 0.5  # 秒
 BRICK_DROP_RAPIDLY   = 0.05
 # 常數-磚塊正常下降速度.
 BRICK_DOWN_SPEED_MAX = 0.9
+
+
+score = 0
 
 # 視窗大小.
 canvas_width = 800
@@ -329,8 +334,8 @@ def updateNextBricks(brickId):
 #   產生新磚塊.
 # -------------------------------------------------------------------------
 def brickNew():
+    global lines_number, game_mode, score
     global game_over, container_x, container_y, brick_id, brick_next_id, brick_state
-    global lines_number, game_mode
 
     # 判斷遊戲結束.
     game_over = False
@@ -343,12 +348,17 @@ def brickNew():
     
     #------------------------------------------------    
     # 判斷與設定要清除的方塊.
-    lines = ifClearBrick() / 10;        
+    lines = ifClearBrick() / 10
+    
     if (lines > 0):
         # 消除連線數量累加.
         lines_number =  lines_number + lines
-        # 修改連線數量.
-        #modifyLabel(linesNumber, fontLinesNumber)
+
+        if lines > 1:
+            score += int(lines) ** 2
+        else:
+            score += int(lines)
+
         # 1:清除磚塊.
         game_mode = 1
 
@@ -387,6 +397,7 @@ def clearBrick():
                         bricks_array[x][y - 1] = bricks_array[x][y]
                         bricks_array[x][y] = temp
                         y = y - 1
+
             bricks_array[x][0] = 0
 
 
@@ -493,9 +504,10 @@ def initial():
     brickNew()
 
 
-def main():
+def main(email: str):
     initial()
 
+    global lines_number_max, score
     global container_x, container_y, game_mode, debug_message, game_over
     global bricks, brick_down_speed, brick_id, brick_state, press_key
 
@@ -503,10 +515,17 @@ def main():
     time_temp = time.time()
     time_now = 0
 
+    press_left = False
+    press_right = False
     msgbox_flag = False
     game_over = False
     pause_game = False
     
+    user = access_db.select("users", [("email", email)], ["="], fetch_columns=["score", "max_lines"])
+    history_max_score = user[0][0][0]
+    lines_number_max = user[0][0][1]
+    
+    print(user)
     
     #-------------------------------------------------------------------------    
     # 主迴圈.
@@ -536,7 +555,11 @@ def main():
                 
                 # 除錯訊息開關: b
                 elif event.key == pygame.K_b:
-                    debug_message = not debug_message                
+                    debug_message = not debug_message
+
+                # 暫停遊戲不得移動方塊
+                if pause_game:
+                    break
 
                 #-----------------------------------------------------------------
                 # 變換方塊-上: up-arraw
@@ -617,16 +640,22 @@ def main():
             continue
         
         if game_over:
-            if pygame.key.get_pressed()[pygame.K_r]:
+            if press_key[pygame.K_r]:
                 msgbox_flag = False
                 game_over = False
                 resetGame()
             
             elif not msgbox_flag and "ok" == messagebox.showinfo("Game Over", "遊戲結束 ! 若要重新開始，請按下鍵盤 R 鍵新開一局"):
                 msgbox_flag = True
+
+                user = access_db.select("users", [("email", email)], ["="], fetch_columns=["email", "score"])
+                history_max_score = user[0][0][1]
+                print(user, history_max_score, score)
+
+                access_db.update("users", {"email": email, "max_lines": lines_number_max, "score": max(score, history_max_score)})
             
             continue
-
+        
         #---------------------------------------------------------------------    
         # 清除畫面.
         canvas.fill(color_light_gray)
@@ -789,6 +818,12 @@ def main():
         showFont( u"本局連線數", 588, 260, color_block)
         showFont( str(int(lines_number)), 588, 290, color_block)
 
+        showFont( u"歷史最高分", 588, 340, color_block)
+        showFont( str(max(history_max_score, score)), 588, 460, color_block)
+
+        showFont( u"當前分數", 588, 420, color_block)
+        showFont( str(score), 588, 370, color_block)
+
         # 顯示 FPS.
         # 除錯訊息.
         if(debug_message):    
@@ -805,4 +840,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main("abc@gmail.com")
