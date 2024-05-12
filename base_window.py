@@ -18,7 +18,7 @@ class BaseWindow(tk.Tk):
                  minSize: tuple[int] | None = None
                  ) -> None:
         """
-        This is a template for any window to inherit.
+        This is a template for any tkinter window to inherit.
 
         Parameters:
 
@@ -35,9 +35,11 @@ class BaseWindow(tk.Tk):
             - minSize: The first element represents width, and the second represents the height.
                        It sets both similar to `min_width` and `min_height`.
             
+            >>> (500, 600)  <=>  min_width = 500, min_height = 600
+            
         Properties:
 
-            - image_path: Given an image path for background.
+            - image_path: Given an image path for background.   .
                           It can use relative path, absolute path to read it.
             
             >>> image_path = 'C:/Users/usr/images/abc.jpg'
@@ -137,7 +139,7 @@ class BaseWindow(tk.Tk):
 
             - entry: an input textbox
             
-            - placeholder: 
+            - placeholder: placeholder message
         """
         
         if entry.get() == "":
