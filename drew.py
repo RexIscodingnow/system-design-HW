@@ -18,7 +18,7 @@ class Box(object):
     #   rect      : 位置、大小.
     #   color     : 顏色.
     #-------------------------------------------------------------------------
-    def __init__( self, pygame: pygame, canvas, name, rect, color):
+    def __init__( self, pygame: pygame, canvas: pygame.Surface, name, rect, color):
         self.pygame = pygame
         self.canvas = canvas
         self.name = name
@@ -32,4 +32,4 @@ class Box(object):
     #-------------------------------------------------------------------------
     def update(self):
         if(self.visivle):
-            self.pygame.draw.rect( self.canvas, self.color, self.rect)
+            self.pygame.draw.rect(self.canvas, self.color, self.rect)
