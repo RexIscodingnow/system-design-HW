@@ -12,8 +12,9 @@ import threading as td
 import play_tetris_ref as tetris
 
 from config import *
+from queue import Queue
 from tkinter import messagebox
-from base_window import BaseWindow, all_widgets_map
+from base_window import BaseWindow
 
 
 # TODO: 改架構:
@@ -102,8 +103,12 @@ class SignUpWindow(BaseWindow, tk.Toplevel):
         if self.entry_email.cget('state') != 'disabled' and not validate_email(email):
             messagebox.showerror("註冊失敗 !", "Email 的格式錯誤 ! 請重新檢查格式是否正確")
             return
+        
+        # TODO: limit the password min length
+        if len(password) < 6:
+            messagebox.showinfo("註冊提示 !", "密碼需至少 6 位以上")
+            return
 
-        # TODO: bcrypt
         hashed_pwd = bcrypt.hashpw(bytes(password.encode()), bcrypt.gensalt())
         access_db.insert(
             table_name="users",
@@ -116,11 +121,12 @@ class SignUpWindow(BaseWindow, tk.Toplevel):
             }
         )
 
-        messagebox.showinfo("註冊", "註冊成功 ! 請關閉註冊視窗 !")
+        if "ok" == messagebox.showinfo("註冊", "註冊成功 ! 請關閉註冊視窗 !"):
+            self.destroy()
 
 
 class LoginWindow(BaseWindow):
-    def __init__(self):
+    def __init__(self, q: Queue):
         super().__init__(
             win_title = "用戶登入 / 註冊",
             height = 300
@@ -143,7 +149,7 @@ class LoginWindow(BaseWindow):
         lbl_title = tk.Label(self, font=FONT_TEXT, text="登入/註冊帳號")
         self.entry_email = tk.Entry(self, font=FONT_ENTRY)
         self.entry_password = tk.Entry(self, font=FONT_ENTRY, name="entry-pwd")
-        self.submit_btn = tk.Button(self, font=FONT_BTN, text="登入", command=self.login_user)
+        self.submit_btn = tk.Button(self, font=FONT_BTN, text="登入", command=lambda: self.login_user(q))
         self.register_btn = tk.Button(self, font=FONT_BTN, text="註冊", command=self.register_user)
 
 
@@ -184,14 +190,14 @@ class LoginWindow(BaseWindow):
     def register_user(self):
         win = SignUpWindow()
         win.mainloop()
-        
 
-    def login_user(self):
+
+    def login_user(self, q: Queue):
         email = self.entry_email.get()
         password = self.entry_password.get()
         
         if self.entry_email.cget('state') != 'disabled' and not validate_email(email):
-            messagebox.showerror("註冊失敗 !", "Email 的格式錯誤 ! 請重新檢查格式是否正確")
+            messagebox.showerror("登入失敗 !", "Email 的格式錯誤 ! 請重新檢查格式是否正確")
             return
         
         fetch_result, _ = access_db.select(
@@ -208,62 +214,12 @@ class LoginWindow(BaseWindow):
         print(hashed_pwd)
 
         if bcrypt.checkpw(password.encode(), hashed_pwd):
+            q.put(email)
             messagebox.showinfo("登入", "登入成功 ! 進入遊戲 !")
             self.destroy()
 
         else:
             messagebox.showwarning("登入", "密碼錯誤 !")
-
-
-class MainWindow(BaseWindow):
-    def __init__(self):
-        super().__init__(
-            win_title="Main window",
-            width=600,
-            height=800
-        )
-        
-        self.centerToScreen()
-        # self.after(1000, self.open_login_window)
-        # self.after(1200, self.open_info_window)
-
-        # 創建一個 Frame 來放置 pygame 畫面
-        embed = tk.Frame(self, width=500, height=500)
-        embed.pack()
-        
-
-    # def closing_wins(self):
-        # try:
-        #     info_win.destroy()
-
-        # except Exception as e:
-        #     print(e)
-    
-        # finally:
-        #     login_window.destroy()
-
-
-    # def open_login_window(self):
-    #     global login_window
-
-    #     login_window = LoginWindow()
-
-    #     try:
-    #         login_window.protocol("WM_DELETE_WINDOW", self.closing_wins)
-    
-    #     except Exception as e:
-    #         print(e)
-        
-    #     finally:
-    #         login_window.mainloop()
-
-
-    # def open_info_window(self):
-    #     global info_win
-
-    #     info_win = InfoWindow()
-    #     info_win.mainloop()
-
 
 
 
@@ -282,7 +238,9 @@ if __name__ == "__main__":
     access_db.exec_cmd_sql(table_create)
 
     # win = MainWindow()
-    win = LoginWindow()
+    queue = Queue()
+    win = LoginWindow(queue)
     win.mainloop()
-    
-    # tetris.main()
+
+    tetris.main(queue.get())
+
