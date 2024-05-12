@@ -562,6 +562,10 @@ def main(email: str):
                 elif event.key == pygame.K_b:
                     debug_message = not debug_message
 
+                elif event.key == pygame.K_r and not game_over:
+                    messagebox.showinfo("操作提示", "在遊戲結束時，才能使用喔 !\n請按下 ESC 鍵繼續遊戲")
+                    pause_game = True
+
                 # 暫停遊戲不得移動方塊
                 if pause_game:
                     break
