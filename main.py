@@ -125,6 +125,86 @@ class SignUpWindow(BaseWindow, tk.Toplevel):
             self.destroy()
 
 
+class ForgotPwdWindow(BaseWindow, tk.Toplevel):
+    def __init__(self):
+        super().__init__(
+            win_title = "忘記密碼",
+            height = 300
+        )
+
+        self.centerToScreen()
+        self.resizable(False, False)
+
+        PLACEHOLDER_EMAIL = "輸入電子信箱"
+        PLACEHOLDER_PASSWORD = "新密碼"
+        PLACEHOLDER_PASSWORD_CONFIRM = "確認密碼"
+
+        lbl_title = tk.Label(self, font=FONT_TEXT, text="重設密碼")
+        self.entry_email = tk.Entry(self, font=FONT_ENTRY)
+        self.entry_password = tk.Entry(self, font=FONT_ENTRY)
+        self.entry_pwd_confirm = tk.Entry(self, font=FONT_ENTRY)
+        self.submit_btn = tk.Button(self, font=FONT_BTN, text="送出", command=self.reset_password)
+        
+        lbl_title.place(
+            x = 160,    y =  10
+        )
+        self.entry_email.place(
+            x = 100,    y =  80
+        )
+        self.entry_password.place(
+            x = 100,    y = 130
+        )
+        self.entry_pwd_confirm.place(
+            x = 100,    y = 180
+        )
+        self.submit_btn.place(
+            x = 200,    y = 230
+        )
+
+        # ---------------------------------------------------------
+        
+        self.entry_email.insert(0, PLACEHOLDER_EMAIL)
+        self.entry_email.configure(state='disabled')
+        self.entry_password.insert(0, PLACEHOLDER_PASSWORD)
+        self.entry_password.configure(state='disabled')
+        self.entry_pwd_confirm.insert(0, PLACEHOLDER_PASSWORD_CONFIRM)
+        self.entry_pwd_confirm.configure(state='disabled')
+
+        # ---------------------------------------------------------
+
+        self.entry_email.bind('<Button-1>', lambda event: self.focus_in_entry(self.entry_email))
+        self.entry_password.bind('<Button-1>', lambda event: self.focus_in_entry(self.entry_password))
+        self.entry_pwd_confirm.bind('<Button-1>', lambda event: self.focus_in_entry(self.entry_pwd_confirm))
+        
+        # ---------------------------------------------------------
+
+        self.entry_email.bind('<FocusOut>', lambda event: self.focus_out_entry(self.entry_email, PLACEHOLDER_EMAIL))
+        self.entry_password.bind('<FocusOut>', lambda event: self.focus_out_entry(self.entry_password, PLACEHOLDER_PASSWORD))
+        self.entry_pwd_confirm.bind('<FocusOut>', lambda event: self.focus_out_entry(self.entry_pwd_confirm, PLACEHOLDER_PASSWORD_CONFIRM))
+
+    
+    def reset_password(self):
+        if self.entry_email.cget('state') == 'disabled' or \
+            self.entry_password.cget('state') == 'disabled' or \
+                self.entry_pwd_confirm.cget('state') == 'disabled':
+            return
+        
+        email = self.entry_email.get()
+        new_password = self.entry_password.get()
+        
+        exist_user, n = access_db.select("users", [("email", email)], ["="])
+        print(exist_user, n)
+
+        if n == 0:
+            return
+
+        hashed_pwd = bcrypt.hashpw(bytes(new_password.encode()), bcrypt.gensalt())
+        access_db.update("users", {
+            "email": email,
+            "password": hashed_pwd
+        })
+
+
 class LoginWindow(BaseWindow):
     def __init__(self, q: Queue):
         super().__init__(
@@ -146,11 +226,12 @@ class LoginWindow(BaseWindow):
 
         """ 所有元件設置 """
 
-        lbl_title = tk.Label(self, font=FONT_TEXT, text="登入/註冊帳號")
+        lbl_title = tk.Label(self, font=FONT_TEXT, text="登入帳號")
         self.entry_email = tk.Entry(self, font=FONT_ENTRY)
         self.entry_password = tk.Entry(self, font=FONT_ENTRY, name="entry-pwd")
         self.submit_btn = tk.Button(self, font=FONT_BTN, text="登入", command=lambda: self.login_user(q))
         self.register_btn = tk.Button(self, font=FONT_BTN, text="註冊", command=self.register_user)
+        self.forgot_pwd_btn = tk.Button(self, font=FONT_BTN, text="忘記密碼", command=self.forgot_password)
 
 
         lbl_title.place(
@@ -163,10 +244,13 @@ class LoginWindow(BaseWindow):
             x = 100,    y = 150
         )
         self.submit_btn.place(
-            x = 160,    y = 230
+            x = 100,    y = 230
         )
         self.register_btn.place(
-            x = 260,    y = 230
+            x = 200,    y = 230
+        )
+        self.forgot_pwd_btn.place(
+            x = 300,     y = 230
         )
 
         self.entry_email.insert(0, PLACEHOLDER_EMAIL)
@@ -189,7 +273,7 @@ class LoginWindow(BaseWindow):
 
     def register_user(self):
         win = SignUpWindow()
-        win.mainloop()
+        win.grab_set()
 
 
     def login_user(self, q: Queue):
@@ -222,6 +306,10 @@ class LoginWindow(BaseWindow):
             messagebox.showwarning("登入", "密碼錯誤 !")
 
 
+    def forgot_password(self):
+        win = ForgotPwdWindow()
+        win.grab_set()
+
 
 if __name__ == "__main__":
     table_create = """
@@ -242,5 +330,6 @@ if __name__ == "__main__":
     win = LoginWindow(queue)
     win.mainloop()
 
-    tetris.main(queue.get())
+    if not queue.empty():
+        tetris.main(queue.get())
 
