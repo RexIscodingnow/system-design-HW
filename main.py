@@ -44,7 +44,7 @@ class SignUpWindow(BaseWindow, tk.Toplevel):
 
         # ==============================================================
 
-        lbl_title = tk.Label(self, font=FONT_TEXT, text="登入/註冊帳號")
+        lbl_title = tk.Label(self, font=FONT_TEXT, text="註冊帳號")
         self.entry_email = tk.Entry(self, font=FONT_ENTRY)
         self.entry_username = tk.Entry(self, font=FONT_ENTRY)
         self.entry_password = tk.Entry(self, font=FONT_ENTRY, name="entry-pwd")
@@ -52,16 +52,16 @@ class SignUpWindow(BaseWindow, tk.Toplevel):
 
 
         lbl_title.place(
-            x = self.winfo_width() + 160,    y =  10
+            x = 185,    y =  10
         )
         self.entry_email.place(
-            x = self.winfo_width() + 100,    y =  80
+            x = 100,    y =  80
         )
         self.entry_username.place(
-            x = self.winfo_width() + 100,    y = 130
+            x = 100,    y = 130
         )
         self.entry_password.place(
-            x = self.winfo_width() + 100,    y = 180
+            x = 100,    y = 180
         )
         self.register_btn.place(
             x = self.width // 2 - 30,    y = 230
@@ -146,7 +146,7 @@ class ForgotPwdWindow(BaseWindow, tk.Toplevel):
         self.submit_btn = tk.Button(self, font=FONT_BTN, text="送出", command=self.reset_password)
         
         lbl_title.place(
-            x = 160,    y =  10
+            x = 170,    y =  10
         )
         self.entry_email.place(
             x = 100,    y =  80
@@ -190,12 +190,18 @@ class ForgotPwdWindow(BaseWindow, tk.Toplevel):
             return
         
         email = self.entry_email.get()
-        new_password = self.entry_password.get()
-        
         exist_user, n = access_db.select("users", [("email", email)], ["="])
         print(exist_user, n)
 
         if n == 0:
+            messagebox.showinfo("hint", "查無此帳號 !")
+            return
+        
+        new_password = self.entry_password.get()
+        confirm_password = self.entry_pwd_confirm.get()
+
+        if new_password != confirm_password:
+            messagebox.showwarning("hint", "密碼必須相同")
             return
 
         hashed_pwd = bcrypt.hashpw(bytes(new_password.encode()), bcrypt.gensalt())
@@ -203,6 +209,9 @@ class ForgotPwdWindow(BaseWindow, tk.Toplevel):
             "email": email,
             "password": hashed_pwd
         })
+
+        if "ok" == messagebox.showinfo("hint", "密碼修改成功"):
+            self.destroy()
 
 
 class LoginWindow(BaseWindow):
@@ -235,7 +244,7 @@ class LoginWindow(BaseWindow):
 
 
         lbl_title.place(
-            x = 160,    y =  10
+            x = 170,    y =  10
         )
         self.entry_email.place(
             x = 100,    y =  80
